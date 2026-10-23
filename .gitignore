@@ -7,3 +7,6 @@ target/
 .env
 *.log
 PROMPT.md
+
+frontend/node_modules/
+frontend/dist/
