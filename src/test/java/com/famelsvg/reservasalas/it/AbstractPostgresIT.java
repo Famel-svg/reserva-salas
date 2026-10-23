@@ -22,7 +22,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
 
 /** Postgres real (um container por JVM) + app completa. Cada teste cria suas proprias salas e usuarios. */
-@SpringBootTest(properties = "app.jwt.secret=integration-test-secret-with-at-least-32-bytes")
+@SpringBootTest(properties = {
+    "app.jwt.secret=integration-test-secret-with-at-least-32-bytes",
+    // todos os ITs logam do mesmo IP (127.0.0.1); limites altos evitam 429 (ADR 0006)
+    "app.ratelimit.login-per-minute=1000",
+    "app.ratelimit.write-per-minute=10000"
+})
 @AutoConfigureMockMvc
 abstract class AbstractPostgresIT {
 
