@@ -14,11 +14,34 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
+@Import(RecurringReservationIT.TestClock.class)
 class RecurringReservationIT extends AbstractPostgresIT {
+
+    @TestConfiguration
+    static class TestClock {
+        @Bean
+        @Primary
+        AdjustableClock adjustableClock() {
+            return new AdjustableClock();
+        }
+    }
+
+    @Autowired AdjustableClock clock;
+
+    @AfterEach
+    void resetClock() {
+        clock.reset();
+    }
 
     private ResultActions recurring(String token, UUID room, Instant start, Instant end, int occurrences)
             throws Exception {
@@ -86,9 +109,10 @@ class RecurringReservationIT extends AbstractPostgresIT {
     void ownerCancelsSeriesIgnoringOccurrencesInsideDeadline() throws Exception {
         UUID room = createRoom(newAdmin());
         String user = newMember();
-        // ~1h from now, aligned to 15 min and in the future: first occurrence is inside the 2h cancel deadline
-        long slot = Instant.now().plus(1, ChronoUnit.HOURS).getEpochSecond() / 900 * 900;
-        Instant start = Instant.ofEpochSecond(slot);
+        // relogio da aplicacao congelado: a 1a ocorrencia (+1h) fica dentro do prazo de 2h para cancelar
+        Instant now = Instant.parse("2030-06-03T09:00:00Z");
+        clock.freezeAt(now);
+        Instant start = now.plus(1, ChronoUnit.HOURS);
         String series = seriesOf(recurring(user, room, start, start.plus(1, ChronoUnit.HOURS), 3)
                 .andExpect(status().isCreated()));
 
