@@ -44,7 +44,8 @@ class ReservationServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         service = new ReservationService(
-                reservations, rooms, clock, Duration.ofHours(4), Duration.ofHours(2), 3, Duration.ofMinutes(15));
+                reservations, rooms, clock, Duration.ofHours(4), Duration.ofHours(2), 3, Duration.ofMinutes(15),
+                org.mockito.Mockito.mock(org.springframework.context.ApplicationEventPublisher.class));
     }
 
     private static Instant at(String time) {

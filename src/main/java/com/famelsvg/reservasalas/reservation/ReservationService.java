@@ -5,6 +5,8 @@ import com.famelsvg.reservasalas.common.error.ConflictException;
 import com.famelsvg.reservasalas.common.error.InvalidRequestException;
 import com.famelsvg.reservasalas.common.error.ResourceNotFoundException;
 import com.famelsvg.reservasalas.room.Room;
+import com.famelsvg.reservasalas.reservation.event.ReservationCancelled;
+import com.famelsvg.reservasalas.reservation.event.ReservationCreated;
 import com.famelsvg.reservasalas.room.RoomRepository;
 import java.time.Clock;
 import java.time.Duration;
@@ -12,6 +14,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +29,7 @@ public class ReservationService {
     private final Duration cancelDeadline;
     private final int maxActivePerUser;
     private final Duration slot;
+    private final ApplicationEventPublisher events;
 
     public ReservationService(
             ReservationRepository reservations,
@@ -34,7 +38,8 @@ public class ReservationService {
             @Value("${app.reservation.max-duration}") Duration maxDuration,
             @Value("${app.reservation.cancel-deadline}") Duration cancelDeadline,
             @Value("${app.reservation.max-active-per-user}") int maxActivePerUser,
-            @Value("${app.reservation.slot}") Duration slot) {
+            @Value("${app.reservation.slot}") Duration slot,
+            ApplicationEventPublisher events) {
         this.reservations = reservations;
         this.rooms = rooms;
         this.clock = clock;
@@ -42,6 +47,7 @@ public class ReservationService {
         this.cancelDeadline = cancelDeadline;
         this.maxActivePerUser = maxActivePerUser;
         this.slot = slot;
+        this.events = events;
     }
 
     @Transactional
@@ -68,7 +74,9 @@ public class ReservationService {
                 roomId, ReservationStatus.ACTIVE, endsAt, startsAt)) {
             throw new ConflictException("Sala já reservada neste horário");
         }
-        return reservations.saveAndFlush(new Reservation(room, userId, startsAt, endsAt));
+        Reservation saved = reservations.saveAndFlush(new Reservation(room, userId, startsAt, endsAt));
+        events.publishEvent(new ReservationCreated(saved.getId(), roomId, userId, startsAt, endsAt));
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -95,6 +103,7 @@ public class ReservationService {
             }
         }
         r.cancel();
+        events.publishEvent(new ReservationCancelled(r.getId(), r.getRoom().getId(), r.getUserId(), r.getStartsAt(), r.getEndsAt()));
         return r;
     }
 
