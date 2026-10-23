@@ -1,8 +1,8 @@
-package com.famelsvg.reservasalas.it;
+package com.famelsvg.reservasalas.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.famelsvg.reservasalas.notification.NotificationSender;
+import com.famelsvg.reservasalas.it.AbstractPostgresIT;
 import com.famelsvg.reservasalas.user.UserRepository;
 import com.jayway.jsonpath.JsonPath;
 import java.util.Base64;
@@ -18,7 +18,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 
 /**
- * Fica em {@code it} porque AbstractPostgresIT e package-private.
  * Fluxo real (HTTP + Postgres) com um sender capturador no lugar do adaptador de log.
  */
 @Import(NotificationIT.Capture.class)
