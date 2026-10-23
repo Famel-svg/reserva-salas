@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import ErrorBanner from '../components/ErrorBanner';
+import { LogoIcon } from '../components/Icons';
 import { useAuth } from '../auth/AuthContext';
 
 export default function LoginPage() {
@@ -23,22 +24,31 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="card narrow">
-      <h1>Entrar</h1>
-      <ErrorBanner error={error} />
-      <form onSubmit={submit}>
-        <label>
-          E-mail
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
-        </label>
-        <label>
-          Senha
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
-        </label>
-        <button type="submit" disabled={busy}>
-          {busy ? 'Entrando…' : 'Entrar'}
-        </button>
-      </form>
+    <main className="login">
+      <div className="card">
+        <div className="login-head">
+          <span className="brand">
+            <LogoIcon />
+            Reserva de Salas
+          </span>
+          <h1>Entrar</h1>
+          <p className="lede">Use o e-mail e a senha cadastrados pelo administrador.</p>
+        </div>
+        <ErrorBanner error={error} />
+        <form onSubmit={submit}>
+          <label>
+            E-mail
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
+          </label>
+          <label>
+            Senha
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+          </label>
+          <button type="submit" disabled={busy}>
+            {busy ? 'Entrando…' : 'Entrar'}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import * as api from '../api/api';
 import { useAuth } from '../auth/AuthContext';
+import ConfirmButton from '../components/ConfirmButton';
 import ErrorBanner from '../components/ErrorBanner';
 
 export default function RoomsPage() {
@@ -11,6 +12,7 @@ export default function RoomsPage() {
   const [editing, setEditing] = useState<string | undefined>();
   const [name, setName] = useState('');
   const [capacity, setCapacity] = useState('1');
+  const nameRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -44,54 +46,68 @@ export default function RoomsPage() {
 
   return (
     <section>
-      <h1>Salas</h1>
+      <div className="page-head">
+        <h1>Salas</h1>
+        {rooms && rooms.length > 0 && <p className="count">{rooms.length} {rooms.length === 1 ? 'sala' : 'salas'}</p>}
+      </div>
       <ErrorBanner error={error} />
-      {rooms === null && <p>Carregando…</p>}
-      {rooms?.length === 0 && <p>Nenhuma sala cadastrada.</p>}
-      <ul className="list">
-        {rooms?.map((r) => (
-          <li key={r.id}>
-            <span>
-              <strong>{r.name}</strong> — {r.capacity} lugares
-            </span>
-            {isAdmin && (
-              <span className="actions">
-                <button
-                  onClick={() => {
-                    setEditing(r.id);
-                    setName(r.name);
-                    setCapacity(String(r.capacity));
-                  }}
-                >
-                  Editar
-                </button>
-                <button className="danger" onClick={() => void run(() => api.deleteRoom(r.id))}>
-                  Remover
-                </button>
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-      {isAdmin && (
-        <form className="card" onSubmit={submit}>
-          <h2>{editing ? 'Editar sala' : 'Nova sala'}</h2>
-          <label>
-            Nome
-            <input value={name} onChange={(e) => setName(e.target.value)} required />
-          </label>
-          <label>
-            Capacidade
-            <input type="number" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value)} required />
-          </label>
-          <button type="submit">{editing ? 'Salvar' : 'Criar sala'}</button>
-          {editing && (
-            <button type="button" onClick={() => { setEditing(undefined); setName(''); setCapacity('1'); }}>
-              Cancelar edição
-            </button>
+      <div className={isAdmin ? 'split' : undefined}>
+        <div className="stack">
+          {rooms === null && <p className="loading" role="status">Carregando…</p>}
+          {rooms?.length === 0 && (
+            <div className="empty">
+              <strong>Nenhuma sala cadastrada.</strong>
+              <span>{isAdmin ? 'Crie a primeira no formulário ao lado.' : 'Peça a um administrador para cadastrar salas.'}</span>
+            </div>
           )}
-        </form>
-      )}
+          <ul className="list">
+            {rooms?.map((r) => (
+              <li key={r.id} className={editing === r.id ? 'row is-editing' : 'row'}>
+                <span className="row-main">
+                  <strong className="row-title">{r.name}</strong>
+                  <span className="meta">{r.capacity} {r.capacity === 1 ? 'lugar' : 'lugares'}</span>
+                </span>
+                {isAdmin && (
+                  <span className="actions">
+                    <button
+                      onClick={() => {
+                        setEditing(r.id);
+                        setName(r.name);
+                        setCapacity(String(r.capacity));
+                        nameRef.current?.focus();
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <ConfirmButton label="Remover" confirmLabel="Confirmar remoção" onConfirm={() => void run(() => api.deleteRoom(r.id))} />
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+        {isAdmin && (
+          <form className="card panel" onSubmit={submit}>
+            <h2>{editing ? 'Editar sala' : 'Nova sala'}</h2>
+            <label>
+              Nome
+              <input ref={nameRef} value={name} onChange={(e) => setName(e.target.value)} required />
+            </label>
+            <label>
+              Capacidade
+              <input type="number" inputMode="numeric" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value)} required />
+            </label>
+            <div className="form-actions">
+              <button type="submit">{editing ? 'Salvar' : 'Criar sala'}</button>
+              {editing && (
+                <button type="button" onClick={() => { setEditing(undefined); setName(''); setCapacity('1'); }}>
+                  Cancelar edição
+                </button>
+              )}
+            </div>
+          </form>
+        )}
+      </div>
     </section>
   );
 }

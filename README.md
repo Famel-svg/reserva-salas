@@ -136,13 +136,17 @@ A suíte tem 106 testes: unitários de regra de negócio, `@WebMvcTest` de segur
 
 Interface em React (Vite + TypeScript) na pasta [`frontend/`](frontend/). Depois de `docker compose up --build`, ela fica em <http://localhost:3000>.
 
-![Tela de login do front-end](docs/img/frontend-login.png)
+![Tela de reservas do front-end, tema escuro](docs/img/design-reservas.png)
+
+Outras telas: [login](docs/img/design-login.png), [salas](docs/img/design-salas.png) e [celular, 375 px](docs/img/design-mobile.png).
 
 - Login com renovação automática do access token (usa o refresh token em caso de 401).
 - Salas: lista para todos; criar, editar e remover só para `ADMIN`.
 - Reservas: formulário com validação de 15 min e início antes do fim, lista e cancelamento.
 - Recorrência semanal e cancelamento de série; `ADMIN` cadastra usuários.
 - Erros do backend (ProblemDetail e 429 com `Retry-After`) aparecem na tela.
+- Remover sala e cancelar reserva ou série pedem confirmação no próprio botão.
+- Tema claro e escuro (segue o sistema), contraste AA e layout de uma coluna no celular.
 
 Para desenvolver sem Docker: `cd frontend && npm ci && npm run dev` (proxy de `/api` para `localhost:8080`). Testes: `npm test -- --run`.
 

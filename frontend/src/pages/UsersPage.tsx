@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import * as api from '../api/api';
 import ErrorBanner from '../components/ErrorBanner';
+import { CheckIcon } from '../components/Icons';
 
 export default function UsersPage() {
   const [email, setEmail] = useState('');
@@ -24,28 +25,38 @@ export default function UsersPage() {
   }
 
   return (
-    <main className="card narrow">
-      <h1>Novo usuário</h1>
-      <ErrorBanner error={error} />
-      {ok && <div className="ok" role="status">{ok}</div>}
-      <form onSubmit={submit}>
-        <label>
-          E-mail
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </label>
-        <label>
-          Senha (8 a 72 caracteres)
-          <input type="password" minLength={8} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
-        </label>
-        <label>
-          Papel
-          <select value={role} onChange={(e) => setRole(e.target.value as api.Role)}>
-            <option value="MEMBER">MEMBER</option>
-            <option value="ADMIN">ADMIN</option>
-          </select>
-        </label>
-        <button type="submit">Criar usuário</button>
-      </form>
-    </main>
+    <section>
+      <div className="page-head">
+        <h1>Usuários</h1>
+      </div>
+      <div className="card narrow stack">
+        <h2>Novo usuário</h2>
+        <ErrorBanner error={error} />
+        {ok && (
+          <div className="ok" role="status">
+            <CheckIcon />
+            <span>{ok}</span>
+          </div>
+        )}
+        <form onSubmit={submit}>
+          <label>
+            E-mail
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </label>
+          <label>
+            Senha (8 a 72 caracteres)
+            <input type="password" minLength={8} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
+          </label>
+          <label>
+            Papel
+            <select value={role} onChange={(e) => setRole(e.target.value as api.Role)}>
+              <option value="MEMBER">MEMBER (reserva salas)</option>
+              <option value="ADMIN">ADMIN (gerencia salas e usuários)</option>
+            </select>
+          </label>
+          <button type="submit">Criar usuário</button>
+        </form>
+      </div>
+    </section>
   );
 }
