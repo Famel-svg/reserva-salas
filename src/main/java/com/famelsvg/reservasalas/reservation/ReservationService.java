@@ -11,8 +11,10 @@ import com.famelsvg.reservasalas.room.RoomRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
@@ -52,6 +54,63 @@ public class ReservationService {
 
     @Transactional
     public Reservation create(UUID userId, UUID roomId, Instant startsAt, Instant endsAt) {
+        return create(userId, roomId, startsAt, endsAt, null);
+    }
+
+    /**
+     * Cria {@code occurrences} reservas semanais reaproveitando {@link #create} (mesmas regras) em uma única
+     * transação: qualquer falha desfaz tudo. Conflitos são acumulados para o erro listar todas as datas; as demais
+     * falhas (limite, passado etc.) propagam na hora. O ConflictException vem da checagem prévia, antes de qualquer
+     * escrita da ocorrência, então não marca a transação como rollback-only e podemos checar as restantes.
+     */
+    @Transactional
+    public List<Reservation> createRecurring(UUID userId, UUID roomId, Instant startsAt, Instant endsAt, int occurrences) {
+        UUID seriesId = UUID.randomUUID();
+        List<Reservation> created = new ArrayList<>();
+        List<Instant> conflicts = new ArrayList<>();
+        for (int i = 0; i < occurrences; i++) {
+            Duration offset = Duration.ofDays(7L * i);
+            Instant start = startsAt.plus(offset);
+            try {
+                created.add(create(userId, roomId, start, endsAt.plus(offset), seriesId));
+            } catch (ConflictException e) {
+                conflicts.add(start);
+            }
+        }
+        if (!conflicts.isEmpty()) {
+            throw new ConflictException("Conflito nas ocorrências: "
+                    + conflicts.stream().map(Instant::toString).collect(Collectors.joining(", ")));
+        }
+        return created;
+    }
+
+    /**
+     * Cancela as ocorrências futuras ACTIVE da série que o usuário pode cancelar, via {@link #cancel}. Ocorrências
+     * dentro do prazo de cancelamento são ignoradas. Devolve a quantidade cancelada.
+     */
+    @Transactional
+    public int cancelSeries(UUID seriesId, UUID userId, boolean admin) {
+        List<Reservation> own = reservations.findBySeriesIdOrderByStartsAt(seriesId).stream()
+                .filter(r -> admin || r.getUserId().equals(userId))
+                .toList();
+        if (own.isEmpty()) {
+            throw new ResourceNotFoundException("Série não encontrada");
+        }
+        Instant now = clock.instant();
+        int cancelled = 0;
+        for (Reservation r : own) {
+            boolean cancellable = r.getStatus() == ReservationStatus.ACTIVE
+                    && r.getStartsAt().isAfter(now)
+                    && (admin || !now.isAfter(r.getStartsAt().minus(cancelDeadline)));
+            if (cancellable) {
+                cancel(r.getId(), userId, admin);
+                cancelled++;
+            }
+        }
+        return cancelled;
+    }
+
+    private Reservation create(UUID userId, UUID roomId, Instant startsAt, Instant endsAt, UUID seriesId) {
         if (!startsAt.isBefore(endsAt)) {
             throw new InvalidRequestException("O início deve ser anterior ao fim");
         }
@@ -74,7 +133,7 @@ public class ReservationService {
                 roomId, ReservationStatus.ACTIVE, endsAt, startsAt)) {
             throw new ConflictException("Sala já reservada neste horário");
         }
-        Reservation saved = reservations.saveAndFlush(new Reservation(room, userId, startsAt, endsAt));
+        Reservation saved = reservations.saveAndFlush(new Reservation(room, userId, startsAt, endsAt, seriesId));
         events.publishEvent(new ReservationCreated(saved.getId(), roomId, userId, startsAt, endsAt));
         return saved;
     }

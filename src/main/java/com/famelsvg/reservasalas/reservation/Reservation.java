@@ -16,6 +16,8 @@ public class Reservation {
     private Room room;
 
     private UUID userId;
+    /** Compartilhado pelas ocorrências de uma recorrência; null em reservas avulsas. */
+    private UUID seriesId;
     private Instant startsAt;
     private Instant endsAt;
 
@@ -25,6 +27,11 @@ public class Reservation {
     protected Reservation() {}
 
     public Reservation(Room room, UUID userId, Instant startsAt, Instant endsAt) {
+        this(room, userId, startsAt, endsAt, null);
+    }
+
+    public Reservation(Room room, UUID userId, Instant startsAt, Instant endsAt, UUID seriesId) {
+        this.seriesId = seriesId;
         this.id = UUID.randomUUID();
         this.room = room;
         this.userId = userId;
@@ -36,6 +43,7 @@ public class Reservation {
     public UUID getId() { return id; }
     public Room getRoom() { return room; }
     public UUID getUserId() { return userId; }
+    public UUID getSeriesId() { return seriesId; }
     public Instant getStartsAt() { return startsAt; }
     public Instant getEndsAt() { return endsAt; }
     public ReservationStatus getStatus() { return status; }

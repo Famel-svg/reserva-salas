@@ -27,6 +27,25 @@ public class ReservationController {
                 service.create(UUID.fromString(jwt.getSubject()), req.roomId(), req.startsAt(), req.endsAt()));
     }
 
+    @PostMapping("/recurring")
+    @ResponseStatus(HttpStatus.CREATED)
+    List<ReservationResponse> createRecurring(
+            @AuthenticationPrincipal Jwt jwt, @Valid @RequestBody RecurringReservationRequest req) {
+        return service
+                .createRecurring(
+                        UUID.fromString(jwt.getSubject()), req.roomId(), req.startsAt(), req.endsAt(), req.occurrences())
+                .stream()
+                .map(ReservationResponse::from)
+                .toList();
+    }
+
+    @DeleteMapping("/series/{seriesId}")
+    SeriesCancellationResponse cancelSeries(
+            @PathVariable UUID seriesId, @AuthenticationPrincipal Jwt jwt, Authentication auth) {
+        return new SeriesCancellationResponse(
+                seriesId, service.cancelSeries(seriesId, UUID.fromString(jwt.getSubject()), isAdmin(auth)));
+    }
+
     @GetMapping("/mine")
     List<ReservationResponse> mine(@AuthenticationPrincipal Jwt jwt) {
         return service.listMine(UUID.fromString(jwt.getSubject())).stream()
@@ -42,7 +61,10 @@ public class ReservationController {
 
     @DeleteMapping("/{id}")
     ReservationResponse cancel(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt, Authentication auth) {
-        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        return ReservationResponse.from(service.cancel(id, UUID.fromString(jwt.getSubject()), admin));
+        return ReservationResponse.from(service.cancel(id, UUID.fromString(jwt.getSubject()), isAdmin(auth)));
+    }
+
+    private static boolean isAdmin(Authentication auth) {
+        return auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }
