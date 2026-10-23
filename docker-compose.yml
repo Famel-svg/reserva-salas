@@ -1,0 +1,32 @@
+# Sobe app e banco com um comando: docker compose up --build
+# Antes, copie .env.example para .env e defina JWT_SECRET.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: reserva_salas
+      POSTGRES_USER: reserva
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-reserva}
+    # Sem "ports": o banco fica só na rede interna do compose.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reserva -d reserva_salas"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Falha no startup se JWT_SECRET não estiver definido.
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no arquivo .env}
+      DB_URL: jdbc:postgresql://db:5432/reserva_salas
+      DB_USER: reserva
+      DB_PASSWORD: ${DB_PASSWORD:-reserva}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    ports:
+      - "8080:8080"
