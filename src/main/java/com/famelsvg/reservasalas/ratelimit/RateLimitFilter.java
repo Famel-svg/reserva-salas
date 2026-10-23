@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -47,6 +48,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private final Map<String, Entry> buckets = new ConcurrentHashMap<>();
+    /** Fonte de tempo monotônico; trocável nos testes para exercitar a limpeza sem esperar 2 minutos. */
+    LongSupplier nanoTime = System::nanoTime;
     private final int loginPerMinute;
     private final int writePerMinute;
     private final ObjectMapper objectMapper;
@@ -87,8 +90,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
         objectMapper.writeValue(res.getOutputStream(), problem);
     }
 
+    /** Quantidade de IPs/chaves rastreados (visível para testes da limpeza). */
+    int trackedKeys() {
+        return buckets.size();
+    }
+
     private ConsumptionProbe consume(String key, int perMinute) {
-        long now = System.nanoTime();
+        long now = nanoTime.getAsLong();
         if (buckets.size() > MAX_KEYS) {
             buckets.values().removeIf(e -> now - e.lastSeen > IDLE_NANOS);
         }
