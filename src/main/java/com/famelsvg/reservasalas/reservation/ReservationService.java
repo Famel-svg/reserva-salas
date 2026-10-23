@@ -63,7 +63,7 @@ public class ReservationService {
                 >= maxActivePerUser) {
             throw new BusinessRuleException("Limite de " + maxActivePerUser + " reservas ativas atingido");
         }
-        Room room = rooms.findById(roomId).orElseThrow(() -> new ResourceNotFoundException("Sala não encontrada"));
+        Room room = rooms.findByIdForUpdate(roomId).orElseThrow(() -> new ResourceNotFoundException("Sala não encontrada"));
         if (reservations.existsByRoomIdAndStatusAndStartsAtLessThanAndEndsAtGreaterThan(
                 roomId, ReservationStatus.ACTIVE, endsAt, startsAt)) {
             throw new ConflictException("Sala já reservada neste horário");

@@ -20,3 +20,11 @@ Usar uma constraint `EXCLUDE USING gist` sobre a coluna `tstzrange` do intervalo
 - A violação gera erro do banco que a aplicação deve traduzir para HTTP 409, o que exige um mapeamento explícito de exceção.
 - Depende da extensão `btree_gist`, que precisa estar disponível e habilitada no ambiente de banco, inclusive em testes e produção.
 - A regra é rígida: qualquer mudança futura que precise permitir sobreposição (por exemplo, overbooking) exigirá alterar a constraint, não apenas o código.
+
+## Atualização: lock de linha na sala durante a criação
+
+A primeira execução da concorrência (20 threads, mesmo horário) mostrou que só o EXCLUDE gera **deadlock** do Postgres (SQLSTATE 40P01) entre INSERTs simultâneos no mesmo intervalo. Vítimas viravam HTTP 500 depois de cerca de 1 segundo.
+
+Solução: antes de checar conflito e gravar, a criação pega um `SELECT ... FOR UPDATE` na linha da sala (`RoomRepository.findByIdForUpdate`, `PESSIMISTIC_WRITE`). As reservas da mesma sala passam a entrar em fila, e as perdedoras caem na checagem normal, que devolve 409. Salas diferentes não se bloqueiam.
+
+A EXCLUDE continua sendo a garantia final e independente da aplicação. O lock só serve para evitar a corrida que ela transformaria em deadlock. O trade-off é que a criação de reservas de uma mesma sala fica serializada.
