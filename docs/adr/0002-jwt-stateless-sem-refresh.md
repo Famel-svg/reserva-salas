@@ -1,6 +1,6 @@
 # ADR 0002: JWT stateless com access token curto, sem refresh token
 
-Status: Aceita
+Status: Substituída pelo ADR 0005
 
 ## Contexto
 
