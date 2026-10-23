@@ -24,3 +24,4 @@ Registro curto do que cada commit entrega, em ordem cronológica.
 - **feat(frontend): interface React (Vite + TypeScript) com login e refresh automático de token, salas, reservas, recorrência, usuários e erros ProblemDetail/429, mais Dockerfile/nginx, serviço `web` no compose e job de CI.**
 - **test: fecha os testes pendentes: ITs nos pacotes certos, AFTER_COMMIT, Redis fora do ar ponta a ponta, limpeza de buckets e filtro de rate limit na cadeia completa, relógio ajustável na recorrência (101 para 106 testes).**
 - **fix(compose): volume nomeado para o Postgres.** Sem ele, `docker compose down` apagava os dados. Agora sobrevivem; `down -v` continua apagando.
+- **style(frontend): layout de dashboard com navegação lateral, cartões de resumo, agenda do dia por sala (08h–20h UTC) calculada no cliente, tabelas responsivas, alternância de tema e bloqueio de duplo envio.**
