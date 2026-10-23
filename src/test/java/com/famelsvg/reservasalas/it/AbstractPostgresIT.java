@@ -29,7 +29,7 @@ import org.testcontainers.containers.RabbitMQContainer;
     "app.ratelimit.write-per-minute=10000"
 })
 @AutoConfigureMockMvc
-abstract class AbstractPostgresIT {
+public abstract class AbstractPostgresIT {
 
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");

@@ -1,9 +1,9 @@
-// Mesmo pacote da base (package-private) para reaproveitar AbstractPostgresIT e o cache de contexto.
-package com.famelsvg.reservasalas.it;
+package com.famelsvg.reservasalas.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.famelsvg.reservasalas.it.AbstractPostgresIT;
 import com.famelsvg.reservasalas.reservation.event.ReservationCancelled;
 import com.famelsvg.reservasalas.reservation.event.ReservationCreated;
 import com.jayway.jsonpath.JsonPath;
