@@ -12,5 +12,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
     long countByUserIdAndStatusAndEndsAtAfter(UUID userId, ReservationStatus status, Instant now);
 
+    List<Reservation> findBySeriesIdOrderByStartsAt(UUID seriesId);
+
     List<Reservation> findByUserIdOrderByStartsAtDesc(UUID userId);
 }
