@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import * as api from '../api/api';
 import { useAuth } from '../auth/AuthContext';
+import ConfirmButton from '../components/ConfirmButton';
 import ErrorBanner from '../components/ErrorBanner';
-import { fmt, parseUtc, validateRange } from '../lib';
+import { AlertIcon } from '../components/Icons';
+import { fmtRange, parseUtc, validateRange } from '../lib';
 
 export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: () => void }) {
   const [roomId, setRoomId] = useState('');
@@ -34,15 +36,20 @@ export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: 
   }
 
   return (
-    <form className="card" onSubmit={submit} noValidate>
+    <form className="card panel" onSubmit={submit} noValidate>
       <h2>Reservar sala</h2>
       <ErrorBanner error={error} />
-      {validation && <div className="error" role="alert">{validation}</div>}
+      {validation && (
+        <div className="error" role="alert">
+          <AlertIcon />
+          <span>{validation}</span>
+        </div>
+      )}
       <label>
         Sala
         <select value={roomId || rooms[0]?.id || ''} onChange={(e) => setRoomId(e.target.value)}>
           {rooms.map((r) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
+            <option key={r.id} value={r.id}>{r.name} ({r.capacity} lugares)</option>
           ))}
         </select>
       </label>
@@ -54,7 +61,8 @@ export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: 
         Fim (UTC)
         <input type="datetime-local" step={900} value={end} onChange={(e) => setEnd(e.target.value)} />
       </label>
-      <label className="inline">
+      <p className="hint">Horários em UTC, em múltiplos de 15 minutos (:00, :15, :30, :45).</p>
+      <label className="check">
         <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
         Repetir semanalmente
       </label>
@@ -72,11 +80,12 @@ export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: 
   );
 }
 
-function ReservationList({ items, rooms, onChanged, setError }: {
+function ReservationList({ items, rooms, onChanged, setError, empty }: {
   items: api.Reservation[];
   rooms: api.Room[];
   onChanged: () => void;
   setError: (e: unknown) => void;
+  empty: string;
 }) {
   const roomName = (id: string) => rooms.find((r) => r.id === id)?.name ?? id;
   async function run(fn: () => Promise<unknown>) {
@@ -88,21 +97,31 @@ function ReservationList({ items, rooms, onChanged, setError }: {
       setError(err);
     }
   }
-  if (items.length === 0) return <p>Nenhuma reserva.</p>;
+  if (items.length === 0) {
+    return (
+      <div className="empty">
+        <strong>Nenhuma reserva.</strong>
+        <span>{empty}</span>
+      </div>
+    );
+  }
   return (
     <ul className="list">
       {items.map((r) => (
-        <li key={r.id}>
-          <span>
-            <strong>{roomName(r.roomId)}</strong> — {fmt(r.startsAt)} a {fmt(r.endsAt)}
-            {r.status === 'CANCELLED' && ' (cancelada)'}
-            {r.seriesId && ' · série'}
+        <li key={r.id} className={r.status === 'CANCELLED' ? 'row is-cancelled' : 'row'}>
+          <span className="row-main">
+            <strong className="row-title">{roomName(r.roomId)}</strong>
+            <span className="meta">{fmtRange(r.startsAt, r.endsAt)}</span>
+            <span className="chips">
+              {r.status === 'ACTIVE' ? <span className="chip active">Ativa</span> : <span className="chip">Cancelada</span>}
+              {r.seriesId && <span className="chip series">Série semanal</span>}
+            </span>
           </span>
           {r.status === 'ACTIVE' && (
             <span className="actions">
-              <button className="danger" onClick={() => void run(() => api.cancelReservation(r.id))}>Cancelar</button>
+              <ConfirmButton label="Cancelar" confirmLabel="Confirmar cancelamento" onConfirm={() => void run(() => api.cancelReservation(r.id))} />
               {r.seriesId && (
-                <button className="danger" onClick={() => void run(() => api.cancelSeries(r.seriesId!))}>Cancelar série</button>
+                <ConfirmButton label="Cancelar série" confirmLabel="Cancelar toda a série" onConfirm={() => void run(() => api.cancelSeries(r.seriesId!))} />
               )}
             </span>
           )}
@@ -111,6 +130,8 @@ function ReservationList({ items, rooms, onChanged, setError }: {
     </ul>
   );
 }
+
+const countLabel = (n: number) => `${n} ${n === 1 ? 'reserva' : 'reservas'}`;
 
 export default function ReservationsPage() {
   const { role } = useAuth();
@@ -132,20 +153,39 @@ export default function ReservationsPage() {
   }, [role]);
   useEffect(() => void load(), [load]);
 
-  if (rooms === null || mine === null) return <p>Carregando…</p>;
+  if (rooms === null || mine === null) return <p className="loading" role="status">Carregando…</p>;
   return (
     <section>
-      <h1>Reservas</h1>
+      <div className="page-head">
+        <h1>Reservas</h1>
+      </div>
       <ErrorBanner error={error} />
-      {rooms.length > 0 ? <ReservationForm rooms={rooms} onDone={() => void load()} /> : <p>Cadastre uma sala para reservar.</p>}
-      <h2>Minhas reservas</h2>
-      <ReservationList items={mine} rooms={rooms} onChanged={() => void load()} setError={setError} />
-      {role === 'ADMIN' && all && (
-        <>
-          <h2>Todas as reservas</h2>
-          <ReservationList items={all} rooms={rooms} onChanged={() => void load()} setError={setError} />
-        </>
-      )}
+      <div className="split">
+        {rooms.length > 0 ? (
+          <ReservationForm rooms={rooms} onDone={() => void load()} />
+        ) : (
+          <div className="empty panel">
+            <strong>Cadastre uma sala para reservar.</strong>
+            <span>Um administrador cria salas na aba Salas.</span>
+          </div>
+        )}
+        <div className="stack">
+          <div className="section-head">
+            <h2>Minhas reservas</h2>
+            <span className="count">{countLabel(mine.length)}</span>
+          </div>
+          <ReservationList items={mine} rooms={rooms} onChanged={() => void load()} setError={setError} empty="Use o formulário para reservar uma sala." />
+          {role === 'ADMIN' && all && (
+            <>
+              <div className="section-head stack-gap">
+                <h2>Todas as reservas</h2>
+                <span className="count">{countLabel(all.length)}</span>
+              </div>
+              <ReservationList items={all} rooms={rooms} onChanged={() => void load()} setError={setError} empty="Ninguém reservou salas ainda." />
+            </>
+          )}
+        </div>
+      </div>
     </section>
   );
 }

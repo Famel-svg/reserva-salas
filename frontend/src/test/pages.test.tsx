@@ -9,7 +9,7 @@ import RoomsPage from '../pages/RoomsPage';
 import { ReservationForm } from '../pages/ReservationsPage';
 import ErrorBanner from '../components/ErrorBanner';
 import { ApiError } from '../api/client';
-import { validateRange } from '../lib';
+import { fmtRange, validateRange } from '../lib';
 import { jsonResponse, mockFetch } from './helpers';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -73,6 +73,25 @@ describe('salas', () => {
     expect(screen.queryByRole('button', { name: 'Editar' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Remover' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Criar sala' })).toBeNull();
+  });
+
+  it('Remover pede confirmação antes de chamar DELETE', async () => {
+    const f = mockFetch(() => jsonResponse(200, rooms));
+    withRole('ADMIN', <RoomsPage />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Remover' }));
+    const deletes = () => f.mock.calls.filter(([, init]) => init?.method === 'DELETE');
+    expect(deletes()).toHaveLength(0);
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remover' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar remoção' }));
+    await waitFor(() => expect(deletes()).toHaveLength(1));
+  });
+});
+
+describe('formatação', () => {
+  it('encurta intervalo no mesmo dia', () => {
+    expect(fmtRange('2030-01-01T10:00:00Z', '2030-01-01T11:30:00Z')).toBe('2030-01-01 10:00–11:30 UTC');
+    expect(fmtRange('2030-01-01T23:00:00Z', '2030-01-02T01:00:00Z')).toBe('2030-01-01 23:00 UTC a 2030-01-02 01:00 UTC');
   });
 });
 

@@ -18,6 +18,13 @@ export function validateRange(start: string, end: string): string | null {
 
 export const fmt = (iso: string) => new Date(iso).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
 
+/** "2030-01-01 10:00–11:00 UTC" no mesmo dia; senão as duas datas completas. */
+export function fmtRange(startIso: string, endIso: string) {
+  const s = fmt(startIso);
+  const e = fmt(endIso);
+  return s.slice(0, 10) === e.slice(0, 10) ? `${s.slice(0, 16)}–${e.slice(11)}` : `${s} a ${e}`;
+}
+
 export function errorParts(err: unknown): { title: string; detail: string } {
   if (err instanceof ApiError) {
     const wait = err.retryAfter ? ` Tente novamente em ${err.retryAfter} s.` : '';
