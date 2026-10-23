@@ -21,13 +21,16 @@ API REST de reserva de salas compartilhadas, sem sobreposição de horário, com
 
 ## Funcionalidades
 
-- CRUD de salas, restrito a `ADMIN`.
+- CRUD de salas, restrito a `ADMIN`. As leituras de sala ficam em cache no Redis por 10 minutos e são invalidadas a cada alteração.
 - Reserva com início e fim em UTC (`timestamptz`), granularidade de 15 minutos, duração máxima de 4 h e sem início no passado.
 - Horários encostados (10h–11h e 11h–12h) são aceitos. O intervalo é semiaberto `[)`.
+- Reserva recorrente semanal (2 ou 3 ocorrências, tudo ou nada), com cancelamento da série inteira.
 - Cancelamento: o dono cancela até 2 h antes do início; `ADMIN` cancela a qualquer hora; outro usuário recebe 403.
-- Limite de 3 reservas ativas por usuário (422 ao passar).
-- Login com senha BCrypt e JWT de acesso curto (15 min).
+- Limite de 3 reservas ativas por usuário (422 ao passar). Cada ocorrência de uma recorrência conta.
+- Login com senha BCrypt, access token JWT de 15 min e refresh token com rotação. Reuso de refresh token revoga todas as sessões do usuário.
 - Só `ADMIN` cadastra usuários. Não há cadastro público.
+- Rate limit por IP: 10 logins por minuto e 60 escritas por minuto. Excesso devolve 429 com `Retry-After`.
+- Após criar ou cancelar, um e-mail é enviado (modo `log` por padrão, ou `smtp`) e o evento vai para o RabbitMQ (exchange `reservas`, chaves `reserva.criada` e `reserva.cancelada`). Os dois acontecem só após o commit.
 
 ## Como a não sobreposição é garantida
 
@@ -134,6 +137,8 @@ A suíte tem 59 testes: unitários de regra de negócio, `@WebMvcTest` de segura
 | Método | Rota | Público | MEMBER | ADMIN |
 |---|---|:-:|:-:|:-:|
 | POST | `/api/auth/login` | sim | | |
+| POST | `/api/auth/refresh` | sim | | |
+| POST | `/api/auth/logout` | sim | | |
 | GET | `/health` | sim | | |
 | GET | `/api/rooms` | | sim | sim |
 | GET | `/api/rooms/{id}` | | sim | sim |
@@ -142,9 +147,11 @@ A suíte tem 59 testes: unitários de regra de negócio, `@WebMvcTest` de segura
 | DELETE | `/api/rooms/{id}` | | | sim |
 | POST | `/api/users` | | | sim |
 | POST | `/api/reservations` | | sim | sim |
+| POST | `/api/reservations/recurring` | | sim | sim |
 | GET | `/api/reservations/mine` | | sim | sim |
 | GET | `/api/reservations` | | | sim |
 | DELETE | `/api/reservations/{id}` | | dono, até 2 h antes | sim, qualquer hora |
+| DELETE | `/api/reservations/series/{seriesId}` | | dono, por ocorrência até 2 h antes | sim, qualquer hora |
 
 Documentação interativa: <http://localhost:8080/swagger-ui.html>.
 
@@ -153,9 +160,15 @@ Documentação interativa: <http://localhost:8080/swagger-ui.html>.
 As decisões estão em [`docs/adr`](docs/adr):
 
 1. [EXCLUDE gist em vez de `@Version` ou lock pessimista](docs/adr/0001-exclude-gist-em-vez-de-lock.md)
-2. [JWT stateless sem refresh](docs/adr/0002-jwt-stateless-sem-refresh.md)
+2. [JWT stateless sem refresh](docs/adr/0002-jwt-stateless-sem-refresh.md) (substituído pelo 0005)
 3. [Pacote por funcionalidade](docs/adr/0003-pacote-por-funcionalidade.md)
 4. [ProblemDetail para erros](docs/adr/0004-problemdetail-para-erros.md)
+5. [Refresh token com rotação](docs/adr/0005-refresh-token-com-rotacao.md)
+6. [Rate limit por IP](docs/adr/0006-rate-limit-por-ip.md)
+7. [Reserva recorrente semanal](docs/adr/0007-reserva-recorrente-semanal.md)
+8. [Cache de salas no Redis](docs/adr/0008-cache-de-salas-redis.md)
+9. [Mensageria com RabbitMQ](docs/adr/0009-mensageria-rabbitmq.md)
+10. [Notificação por e-mail após o commit](docs/adr/0010-notificacao-por-email-apos-commit.md)
 
 O histórico de cada commit está em [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
 
@@ -166,9 +179,13 @@ Tudo vem de variáveis de ambiente. Veja [`.env.example`](.env.example).
 | Variável | Obrigatória | Descrição |
 |---|:-:|---|
 | `JWT_SECRET` | sim | Segredo HS256 de no mínimo 32 bytes. Não tem valor padrão: o app não sobe sem ele. |
-| `JWT_TTL` | não | Duração do token, ISO 8601. Padrão `PT15M`. |
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | não | Conexão com o PostgreSQL. |
 | `SPRING_PROFILES_ACTIVE=dev` + `ADMIN_EMAIL` + `ADMIN_PASSWORD` | não | Cria o admin inicial só no perfil `dev`. Nunca em migration. |
+| `JWT_TTL` e `REFRESH_TTL` | não | Duração do access token (padrão `PT15M`) e do refresh token (padrão `P7D`). |
+| `REDIS_HOST`, `REDIS_PORT` | não | Redis do cache de salas. |
+| `RABBIT_HOST`, `RABBIT_PORT`, `RABBIT_USER`, `RABBIT_PASSWORD` | não | Broker dos eventos de reserva. |
+| `NOTIFICATION_MODE` | não | `log` (padrão, só registra no console) ou `smtp` (usa `spring.mail.*`; falha no startup se o SMTP não estiver configurado). |
+| `NOTIFICATION_FROM` | não | Remetente dos e-mails. |
 
 O actuator expõe somente `/health`.
 
@@ -178,18 +195,16 @@ O actuator expõe somente `/health`.
 - **Cancelar não é idempotente.** Cancelar uma reserva já cancelada devolve 200 de novo. Eu deixaria explícito (409 ou 204 com regra clara).
 - **Apagar sala com reservas dá 409.** A chave estrangeira protege, mas o usuário merece uma mensagem clara. Eu marcaria a sala como inativa em vez de apagar.
 - **Login revela tempo de resposta.** A mensagem de erro é igual para e-mail inexistente e senha errada, mas o BCrypt só roda quando o usuário existe. Eu igualaria o tempo com um hash fictício.
-- **Sem revogação de token.** Com o TTL de 15 min o risco é pequeno, mas um logout real pediria lista de revogação ou refresh token.
+- **Access token não é revogável.** Logout e reuso revogam o refresh token, mas o access token segue válido até o TTL de 15 min. Para revogação imediata eu guardaria uma lista de tokens revogados consultada por requisição.
+- **Limite de reservas e recorrência brigam entre si.** Com o limite padrão de 3, uma recorrência de 3 semanas só passa se o usuário não tiver nenhuma outra reserva ativa. Eu separaria o limite por série ou aumentaria o padrão com uma regra explícita.
 - **Extensão `btree_gist` na migration.** Exige privilégio de superuser ou extensão confiável no ambiente. Em produção eu separaria essa etapa do Flyway.
 
-## Fora do MVP (evolução)
+## Ainda fora do escopo
 
-Ficaram de fora de propósito, para manter o escopo fechado:
+Estas evoluções ficaram de fora desta versão, de propósito:
 
-- Refresh token e revogação de sessão.
-- Rate limit no login e nas rotas de escrita.
-- Reserva recorrente.
-- Notificação por e-mail.
-- Cache com Redis.
-- Front-end.
-- Mensageria para eventos de reserva.
+- Front-end. É um projeto separado, com stack própria, e a API já tem documentação interativa.
+- Outbox transacional para eventos, para garantir entrega mesmo com o broker fora do ar (hoje a entrega é at-most-once, ver ADR 0009).
+- Limpeza periódica de refresh tokens expirados (ADR 0005).
+- Rate limit distribuído. Hoje o contador é por instância (ADR 0006).
 
