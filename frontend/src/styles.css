@@ -159,6 +159,7 @@ a:hover { text-decoration-thickness: 2px; }
 }
 .who { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
 .who strong { display: none; font-size: var(--t2); }
+.out-label { display: none; }
 .role {
   align-self: flex-start;
   font-size: var(--t1);
@@ -184,7 +185,7 @@ a:hover { text-decoration-thickness: 2px; }
     border-right: 1px solid var(--border);
     padding: var(--s5) var(--s4);
   }
-  .brand { padding-inline: var(--s3); }
+  .sidebar .brand { padding-inline: var(--s3); }
   .nav { display: flex; flex-direction: column; gap: var(--s1); margin: 0; }
   .nav a {
     flex-direction: row;
@@ -198,7 +199,17 @@ a:hover { text-decoration-thickness: 2px; }
   }
   .nav a:hover { background: var(--surface-2); }
   .nav a[aria-current="page"] { background: var(--accent-soft); }
-  .session { margin-top: auto; padding: var(--s4) var(--s1) 0; border-top: 1px solid var(--border); }
+  /* Rodapé: avatar, papel e tema na 1ª linha; "Sair" com rótulo ocupando a 2ª. */
+  .session {
+    margin-top: auto;
+    padding: var(--s4) var(--s1) 0;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    row-gap: var(--s2);
+  }
+  .session .icon-btn:last-child { grid-column: 1 / -1; width: auto; justify-content: flex-start; padding-inline: var(--s3); }
+  .out-label { display: inline; }
   .avatar { display: grid; }
   .who { flex: 1; }
   .who strong { display: block; }

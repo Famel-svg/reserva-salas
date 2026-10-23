@@ -37,6 +37,7 @@ export default function App() {
           <ThemeToggle />
           <button className="ghost icon-btn" onClick={() => void signOut()} aria-label="Sair" title="Sair">
             <LogoutIcon />
+            <span className="out-label">Sair</span>
           </button>
         </div>
       </aside>
