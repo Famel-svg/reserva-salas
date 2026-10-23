@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import * as api from '../api/api';
 import ErrorBanner from '../components/ErrorBanner';
 import { CheckIcon } from '../components/Icons';
+import PageHeader from '../components/PageHeader';
 
 export default function UsersPage() {
   const [email, setEmail] = useState('');
@@ -26,11 +27,12 @@ export default function UsersPage() {
 
   return (
     <section>
-      <div className="page-head">
-        <h1>Usuários</h1>
-      </div>
+      <PageHeader title="Usuários" subtitle="Cadastre pessoas que podem entrar e reservar salas." />
       <div className="card narrow stack">
-        <h2>Novo usuário</h2>
+        <div className="form-title">
+          <h2>Novo usuário</h2>
+          <p className="hint">A pessoa entra com este e-mail e esta senha; passe a senha por um canal seguro.</p>
+        </div>
         <ErrorBanner error={error} />
         {ok && (
           <div className="ok" role="status">
@@ -39,21 +41,23 @@ export default function UsersPage() {
           </div>
         )}
         <form onSubmit={submit}>
-          <label>
-            E-mail
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </label>
-          <label>
-            Senha (8 a 72 caracteres)
-            <input type="password" minLength={8} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
-          </label>
-          <label>
-            Papel
-            <select value={role} onChange={(e) => setRole(e.target.value as api.Role)}>
+          <div className="field">
+            <label htmlFor="user-email">E-mail</label>
+            <input id="user-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label htmlFor="user-password">Senha</label>
+            <input id="user-password" type="password" minLength={8} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
+            <p className="hint">Entre 8 e 72 caracteres.</p>
+          </div>
+          <div className="field">
+            <label htmlFor="user-role">Papel</label>
+            <select id="user-role" value={role} onChange={(e) => setRole(e.target.value as api.Role)}>
               <option value="MEMBER">MEMBER (reserva salas)</option>
               <option value="ADMIN">ADMIN (gerencia salas e usuários)</option>
             </select>
-          </label>
+            <p className="hint">ADMIN também vê e cancela as reservas de todos.</p>
+          </div>
           <button type="submit">Criar usuário</button>
         </form>
       </div>

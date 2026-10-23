@@ -36,14 +36,14 @@ export default function LoginPage() {
         </div>
         <ErrorBanner error={error} />
         <form onSubmit={submit}>
-          <label>
-            E-mail
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
-          </label>
-          <label>
-            Senha
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
-          </label>
+          <div className="field">
+            <label htmlFor="login-email">E-mail</label>
+            <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
+          </div>
+          <div className="field">
+            <label htmlFor="login-password">Senha</label>
+            <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+          </div>
           <button type="submit" disabled={busy}>
             {busy ? 'Entrando…' : 'Entrar'}
           </button>

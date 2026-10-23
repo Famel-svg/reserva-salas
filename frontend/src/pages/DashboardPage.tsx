@@ -1,12 +1,14 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import * as api from '../api/api';
 import { useAuth } from '../auth/AuthContext';
 import { summarize } from '../agenda';
+import Agenda from '../components/Agenda';
 import ErrorBanner from '../components/ErrorBanner';
 import PageHeader from '../components/PageHeader';
+import ReservationTable from '../components/ReservationTable';
 import { CalendarIcon, CheckIcon, ClockIcon, PlusIcon, RoomIcon } from '../components/Icons';
-import { fmtRange } from '../lib';
+import { fmtShort } from '../lib';
 
 const today = (now: Date) =>
   new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(now);
@@ -30,17 +32,16 @@ export default function DashboardPage() {
   const [error, setError] = useState<unknown>(null);
   const [now] = useState(() => new Date());
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [rooms, mine, all] = await Promise.all([api.listRooms(), api.myReservations(), isAdmin ? api.allReservations() : null]);
-        setData({ rooms, mine, all });
-      } catch (err) {
-        setError(err);
-        setData({ rooms: [], mine: [], all: null });
-      }
-    })();
+  const load = useCallback(async () => {
+    try {
+      const [rooms, mine, all] = await Promise.all([api.listRooms(), api.myReservations(), isAdmin ? api.allReservations() : null]);
+      setData({ rooms, mine, all });
+    } catch (err) {
+      setError(err);
+      setData((d) => d ?? { rooms: [], mine: [], all: null });
+    }
   }, [isAdmin]);
+  useEffect(() => void load(), [load]);
 
   const header = (
     <PageHeader
@@ -76,11 +77,26 @@ export default function DashboardPage() {
           icon={<ClockIcon />}
           label="Minhas próximas"
           value={s.upcoming.length}
-          sub={next ? <>Próxima: {roomName(next.roomId)}, <span className="num">{fmtRange(next.startsAt, next.endsAt)}</span></> : 'Nenhuma agendada'}
+          sub={next ? <>Próxima: {roomName(next.roomId)}, <span className="num">{fmtShort(next.startsAt)}</span></> : 'Nenhuma agendada'}
         />
         {s.activeTotal !== null && (
           <Stat icon={<CheckIcon />} label="Reservas ativas no total" value={s.activeTotal} sub={plural(s.cancelledTotal ?? 0, 'cancelada', 'canceladas')} />
         )}
+      </div>
+      <Agenda rooms={data.rooms} reservations={data.all ?? data.mine} mineIds={new Set(data.mine.map((r) => r.id))} now={now} isAdmin={isAdmin} />
+      <div className="card stack">
+        <div className="card-head">
+          <h2>Minhas próximas reservas</h2>
+          <Link to="/reservations">Ver todas</Link>
+        </div>
+        <ReservationTable
+          items={s.upcoming.slice(0, 5)}
+          rooms={data.rooms}
+          onChanged={() => void load()}
+          setError={setError}
+          empty="Use “Nova reserva” para agendar uma sala."
+          caption="Minhas próximas reservas"
+        />
       </div>
     </section>
   );
