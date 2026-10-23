@@ -130,7 +130,21 @@ Para rodar a suíte completa (precisa de Docker para o Testcontainers):
 JWT_SECRET=ci-only-secret-com-mais-de-32-bytes-0123456789 ./mvnw verify
 ```
 
-A suíte tem 59 testes: unitários de regra de negócio, `@WebMvcTest` de segurança e testes ponta a ponta com PostgreSQL 16 real. O gate JaCoCo exige 80% de linhas e o projeto está em cerca de 87%.
+A suíte tem 106 testes: unitários de regra de negócio, `@WebMvcTest` de segurança e testes ponta a ponta com PostgreSQL 16 real. O gate JaCoCo exige 80% de linhas e o projeto está em cerca de 91%.
+
+## Front-end
+
+Interface em React (Vite + TypeScript) na pasta [`frontend/`](frontend/). Depois de `docker compose up --build`, ela fica em <http://localhost:3000>.
+
+![Tela de login do front-end](docs/img/frontend-login.png)
+
+- Login com renovação automática do access token (usa o refresh token em caso de 401).
+- Salas: lista para todos; criar, editar e remover só para `ADMIN`.
+- Reservas: formulário com validação de 15 min e início antes do fim, lista e cancelamento.
+- Recorrência semanal e cancelamento de série; `ADMIN` cadastra usuários.
+- Erros do backend (ProblemDetail e 429 com `Retry-After`) aparecem na tela.
+
+Para desenvolver sem Docker: `cd frontend && npm ci && npm run dev` (proxy de `/api` para `localhost:8080`). Testes: `npm test -- --run`.
 
 ## Endpoints por papel
 
@@ -203,7 +217,6 @@ O actuator expõe somente `/health`.
 
 Estas evoluções ficaram de fora desta versão, de propósito:
 
-- Front-end. É um projeto separado, com stack própria, e a API já tem documentação interativa.
 - Outbox transacional para eventos, para garantir entrega mesmo com o broker fora do ar (hoje a entrega é at-most-once, ver ADR 0009).
 - Limpeza periódica de refresh tokens expirados (ADR 0005).
 - Rate limit distribuído. Hoje o contador é por instância (ADR 0006).
