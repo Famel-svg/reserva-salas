@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: reserva-salas
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/reserva_salas}
+    username: ${DB_USER:reserva}
+    password: ${DB_PASSWORD:reserva}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+
+app:
+  jwt:
+    # Sem valor padrão: a aplicação não sobe sem JWT_SECRET.
+    secret: ${JWT_SECRET}
+    ttl: ${JWT_TTL:PT15M}
+  reservation:
+    max-duration: PT4H
+    cancel-deadline: PT2H
+    max-active-per-user: 3
+    slot: PT15M
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
