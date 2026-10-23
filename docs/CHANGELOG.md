@@ -23,3 +23,4 @@ Registro curto do que cada commit entrega, em ordem cronológica.
 - **feat(notificacoes): e-mail "Reserva confirmada"/"Reserva cancelada" enviado após o commit, com adaptadores log (padrão) e SMTP com fail fast, entrega best-effort (ADR 0010).**
 - **feat(frontend): interface React (Vite + TypeScript) com login e refresh automático de token, salas, reservas, recorrência, usuários e erros ProblemDetail/429, mais Dockerfile/nginx, serviço `web` no compose e job de CI.**
 - **test: fecha os testes pendentes: ITs nos pacotes certos, AFTER_COMMIT, Redis fora do ar ponta a ponta, limpeza de buckets e filtro de rate limit na cadeia completa, relógio ajustável na recorrência (101 para 106 testes).**
+- **fix(compose): volume nomeado para o Postgres.** Sem ele, `docker compose down` apagava os dados. Agora sobrevivem; `down -v` continua apagando.

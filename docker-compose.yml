@@ -8,6 +8,8 @@ services:
       POSTGRES_USER: reserva
       POSTGRES_PASSWORD: ${DB_PASSWORD:-reserva}
     # Sem "ports": o banco fica só na rede interna do compose.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U reserva -d reserva_salas"]
       interval: 5s
@@ -60,3 +62,7 @@ services:
       - app
     ports:
       - "3000:80"
+
+# Dados do Postgres sobrevivem a "docker compose down". Use "down -v" para apagar.
+volumes:
+  pgdata:
