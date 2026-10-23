@@ -1,0 +1,5 @@
+# Perfil dev. ADMIN_EMAIL e ADMIN_PASSWORD (variáveis de ambiente) são lidos pelo
+# DevAdminBootstrap, que cria o admin inicial se ainda não existir. Nunca em migration.
+app:
+  dev:
+    admin-enabled: true

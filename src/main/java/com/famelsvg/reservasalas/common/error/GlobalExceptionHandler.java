@@ -1,13 +1,14 @@
 package com.famelsvg.reservasalas.common.error;
 
 import java.net.URI;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -41,6 +42,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessRuleException.class)
     ProblemDetail businessRule(BusinessRuleException ex) {
         return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Regra de negócio violada", ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    ProblemDetail invalidRequest(InvalidRequestException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "Requisição inválida", ex.getMessage());
+    }
+
+    /** Corpo inválido (Bean Validation ou JSON malformado) é erro do cliente, não 500. */
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
+    ProblemDetail malformedBody(Exception ex) {
+        return problem(HttpStatus.BAD_REQUEST, "Requisição inválida", "Corpo da requisição inválido");
     }
 
     @ExceptionHandler(AccessDeniedException.class)
