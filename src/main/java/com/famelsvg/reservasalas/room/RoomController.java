@@ -19,25 +19,25 @@ public class RoomController {
 
     @GetMapping
     List<RoomResponse> list() {
-        return service.list().stream().map(RoomResponse::from).toList();
+        return service.list();
     }
 
     @GetMapping("/{id}")
     RoomResponse get(@PathVariable UUID id) {
-        return RoomResponse.from(service.get(id));
+        return service.get(id);
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     RoomResponse create(@Valid @RequestBody RoomRequest req) {
-        return RoomResponse.from(service.create(req.name(), req.capacity()));
+        return service.create(req.name(), req.capacity());
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     RoomResponse update(@PathVariable UUID id, @Valid @RequestBody RoomRequest req) {
-        return RoomResponse.from(service.update(id, req.name(), req.capacity()));
+        return service.update(id, req.name(), req.capacity());
     }
 
     @DeleteMapping("/{id}")

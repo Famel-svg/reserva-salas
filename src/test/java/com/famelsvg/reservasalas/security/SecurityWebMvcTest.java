@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.famelsvg.reservasalas.reservation.ReservationController;
 import com.famelsvg.reservasalas.reservation.ReservationService;
-import com.famelsvg.reservasalas.room.Room;
 import com.famelsvg.reservasalas.room.RoomController;
+import com.famelsvg.reservasalas.room.RoomResponse;
 import com.famelsvg.reservasalas.room.RoomService;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.nio.charset.StandardCharsets;
@@ -104,14 +104,14 @@ class SecurityWebMvcTest {
 
     @Test
     void memberCanListRooms() throws Exception {
-        when(roomService.list()).thenReturn(List.of(new Room("A", 3)));
+        when(roomService.list()).thenReturn(List.of(new RoomResponse(java.util.UUID.randomUUID(), "A", 3)));
         mvc.perform(get("/api/rooms").header("Authorization", "Bearer " + valid("MEMBER")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void adminCanCreateRoom() throws Exception {
-        when(roomService.create("Sala", 5)).thenReturn(new Room("Sala", 5));
+        when(roomService.create("Sala", 5)).thenReturn(new RoomResponse(java.util.UUID.randomUUID(), "Sala", 5));
         mvc.perform(post("/api/rooms").header("Authorization", "Bearer " + valid("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON).content(ROOM_JSON))
                 .andExpect(status().isCreated());
