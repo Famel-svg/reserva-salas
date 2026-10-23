@@ -30,6 +30,12 @@ Vantagem: simples e some ao fechar a aba. Desvantagem: qualquer XSS na página c
 Alternativa mais segura: refresh token em cookie `HttpOnly` + `SameSite`, o que exige mudar o backend.
 Aceitável neste projeto; o backend continua sendo a autoridade sobre permissões (a UI só esconde botões).
 
+## Interface
+
+- Cores em variáveis CSS no `:root` de `src/styles.css`; o tema escuro segue `prefers-color-scheme` e pode ser forçado com `data-theme="light"` ou `"dark"` no `<html>`.
+- Ações destrutivas usam `ConfirmButton`: o primeiro clique só mostra "Confirmar …" e "Voltar" (Esc também desiste).
+- Controles têm no mínimo 44 px de altura; abaixo de 860 px a tela vira uma coluna.
+
 ## Notas
 
 - Datas de reserva são em UTC, com alinhamento de 15 minutos.
