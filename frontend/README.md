@@ -32,9 +32,13 @@ Aceitável neste projeto; o backend continua sendo a autoridade sobre permissõe
 
 ## Interface
 
-- Cores em variáveis CSS no `:root` de `src/styles.css`; o tema escuro segue `prefers-color-scheme` e pode ser forçado com `data-theme="light"` ou `"dark"` no `<html>`.
+- Layout de painel administrativo: navegação lateral fixa no desktop (a partir de 900 px) e barra superior com abas no celular; a página atual tem `aria-current="page"`.
+- **Visão geral** (`/overview`, rota padrão): cartões de resumo e a agenda de hoje (08h–20h UTC, uma faixa por sala). Tudo é calculado no cliente em `src/agenda.ts`, a partir de `GET /api/rooms`, `GET /api/reservations/mine` e, para `ADMIN`, `GET /api/reservations`; para `MEMBER` a agenda mostra só as próprias reservas.
+- Listas em tabela com cabeçalho fixo; abaixo de 640 px cada linha vira um cartão.
+- Cores em variáveis CSS no `:root` de `src/styles.css`; o tema escuro segue `prefers-color-scheme`. O botão de tema grava `data-theme` no `<html>` e a escolha em `localStorage` (chave `theme`).
 - Ações destrutivas usam `ConfirmButton`: o primeiro clique só mostra "Confirmar …" e "Voltar" (Esc também desiste).
-- Controles têm no mínimo 44 px de altura; abaixo de 860 px a tela vira uma coluna.
+- Formulários: texto de ajuda e mensagens de validação ligados aos campos por `aria-describedby`; o botão fica desabilitado com "Salvando…" enquanto a requisição está em andamento.
+- Escala de espaçamento 4/8/12/16/24/32 px e 4 tamanhos de texto; controles com no mínimo 44 px de altura.
 
 ## Notas
 

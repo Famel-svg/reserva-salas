@@ -2,6 +2,7 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import { CalendarIcon, LogoIcon, LogoutIcon, OverviewIcon, RoomIcon, UsersIcon } from './components/Icons';
 import DashboardPage from './pages/DashboardPage';
+import ThemeToggle from './components/ThemeToggle';
 import LoginPage from './pages/LoginPage';
 import ReservationsPage from './pages/ReservationsPage';
 import RoomsPage from './pages/RoomsPage';
@@ -33,6 +34,7 @@ export default function App() {
             <strong>{roleName[role]}</strong>
             <span className="role">{role}</span>
           </span>
+          <ThemeToggle />
           <button className="ghost icon-btn" onClick={() => void signOut()} aria-label="Sair" title="Sair">
             <LogoutIcon />
           </button>

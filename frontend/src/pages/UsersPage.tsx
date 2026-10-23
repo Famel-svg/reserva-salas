@@ -10,9 +10,12 @@ export default function UsersPage() {
   const [role, setRole] = useState<api.Role>('MEMBER');
   const [error, setError] = useState<unknown>(null);
   const [ok, setOk] = useState('');
+  const [busy, setBusy] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
+    setBusy(true);
     setError(null);
     setOk('');
     try {
@@ -22,6 +25,8 @@ export default function UsersPage() {
       setPassword('');
     } catch (err) {
       setError(err);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -47,18 +52,18 @@ export default function UsersPage() {
           </div>
           <div className="field">
             <label htmlFor="user-password">Senha</label>
-            <input id="user-password" type="password" minLength={8} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
-            <p className="hint">Entre 8 e 72 caracteres.</p>
+            <input id="user-password" aria-describedby="user-password-hint" type="password" minLength={8} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
+            <p className="hint" id="user-password-hint">Entre 8 e 72 caracteres.</p>
           </div>
           <div className="field">
             <label htmlFor="user-role">Papel</label>
-            <select id="user-role" value={role} onChange={(e) => setRole(e.target.value as api.Role)}>
+            <select id="user-role" aria-describedby="user-role-hint" value={role} onChange={(e) => setRole(e.target.value as api.Role)}>
               <option value="MEMBER">MEMBER (reserva salas)</option>
               <option value="ADMIN">ADMIN (gerencia salas e usuários)</option>
             </select>
-            <p className="hint">ADMIN também vê e cancela as reservas de todos.</p>
+            <p className="hint" id="user-role-hint">ADMIN também vê e cancela as reservas de todos.</p>
           </div>
-          <button type="submit">Criar usuário</button>
+          <button type="submit" disabled={busy}>{busy ? 'Salvando…' : 'Criar usuário'}</button>
         </form>
       </div>
     </section>

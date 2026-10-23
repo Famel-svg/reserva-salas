@@ -16,9 +16,15 @@ export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: 
   const [occurrences, setOccurrences] = useState('2');
   const [error, setError] = useState<unknown>(null);
   const [validation, setValidation] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // Liga a mensagem de validação aos campos que ela descreve.
+  const describe = (hint: string, invalid: boolean) => (invalid ? `${hint} res-validation` : hint);
+  const roomInvalid = validation === 'Escolha uma sala.';
+  const rangeInvalid = !!validation && !roomInvalid;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setError(null);
     const msg = !(roomId || rooms[0]) ? 'Escolha uma sala.' : validateRange(start, end);
     setValidation(msg);
@@ -28,12 +34,15 @@ export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: 
       startsAt: parseUtc(start).toISOString(),
       endsAt: parseUtc(end).toISOString(),
     };
+    setBusy(true);
     try {
       if (recurring) await api.reserveRecurring({ ...body, occurrences: Number(occurrences) });
       else await api.reserve(body);
       onDone();
     } catch (err) {
       setError(err);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -45,7 +54,7 @@ export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: 
       </div>
       <ErrorBanner error={error} />
       {validation && (
-        <div className="error" role="alert">
+        <div className="error" role="alert" id="res-validation">
           <AlertIcon />
           <span>{validation}</span>
         </div>
@@ -53,22 +62,22 @@ export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: 
       <div className="form-grid">
         <div className="field">
           <label htmlFor="res-room">Sala</label>
-          <select id="res-room" value={roomId || rooms[0]?.id || ''} onChange={(e) => setRoomId(e.target.value)}>
+          <select id="res-room" aria-describedby={describe('res-room-hint', roomInvalid)} aria-invalid={roomInvalid || undefined} value={roomId || rooms[0]?.id || ''} onChange={(e) => setRoomId(e.target.value)}>
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>{r.name} ({r.capacity} lugares)</option>
             ))}
           </select>
-          <p className="hint">A capacidade aparece entre parênteses.</p>
+          <p className="hint" id="res-room-hint">A capacidade aparece entre parênteses.</p>
         </div>
         <div className="field">
           <label htmlFor="res-start">Início (UTC)</label>
-          <input id="res-start" type="datetime-local" step={900} value={start} onChange={(e) => setStart(e.target.value)} />
-          <p className="hint">Ex.: 09:00 ou 09:15.</p>
+          <input id="res-start" aria-describedby={describe('res-start-hint', rangeInvalid)} aria-invalid={rangeInvalid || undefined} type="datetime-local" step={900} value={start} onChange={(e) => setStart(e.target.value)} />
+          <p className="hint" id="res-start-hint">Ex.: 09:00 ou 09:15.</p>
         </div>
         <div className="field">
           <label htmlFor="res-end">Fim (UTC)</label>
-          <input id="res-end" type="datetime-local" step={900} value={end} onChange={(e) => setEnd(e.target.value)} />
-          <p className="hint">Deve ser depois do início.</p>
+          <input id="res-end" aria-describedby={describe('res-end-hint', rangeInvalid)} aria-invalid={rangeInvalid || undefined} type="datetime-local" step={900} value={end} onChange={(e) => setEnd(e.target.value)} />
+          <p className="hint" id="res-end-hint">Deve ser depois do início.</p>
         </div>
       </div>
       <div className="form-foot">
@@ -87,7 +96,7 @@ export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: 
             </div>
           )}
         </div>
-        <button type="submit">Reservar</button>
+        <button type="submit" disabled={busy}>{busy ? 'Salvando…' : 'Reservar'}</button>
       </div>
       {recurring && (
         <p className="hint" id="res-occ-hint">Mesmo dia e horário nas semanas seguintes; se uma ocorrência conflitar, nenhuma é criada.</p>

@@ -553,3 +553,4 @@ button:disabled { opacity: 0.6; cursor: default; filter: none; }
   .agenda-row { grid-template-columns: minmax(0, 1fr); gap: var(--s1); }
   .agenda-room { flex-direction: row; align-items: baseline; gap: var(--s2); }
 }
+.login-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }

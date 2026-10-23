@@ -15,6 +15,7 @@ export default function RoomsPage() {
   const [editing, setEditing] = useState<string | undefined>();
   const [name, setName] = useState('');
   const [capacity, setCapacity] = useState('1');
+  const [saving, setSaving] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -39,12 +40,14 @@ export default function RoomsPage() {
 
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (saving) return;
+    setSaving(true);
     void run(async () => {
       await api.saveRoom({ name, capacity: Number(capacity) }, editing);
       setEditing(undefined);
       setName('');
       setCapacity('1');
-    });
+    }).finally(() => setSaving(false));
   }
 
   const seats = rooms?.reduce((n, r) => n + r.capacity, 0) ?? 0;
@@ -126,16 +129,16 @@ export default function RoomsPage() {
             </div>
             <div className="field">
               <label htmlFor="room-name">Nome</label>
-              <input id="room-name" ref={nameRef} value={name} onChange={(e) => setName(e.target.value)} required />
-              <p className="hint">Aparece na lista, nas reservas e na agenda.</p>
+              <input id="room-name" aria-describedby="room-name-hint" ref={nameRef} value={name} onChange={(e) => setName(e.target.value)} required />
+              <p className="hint" id="room-name-hint">Aparece na lista, nas reservas e na agenda.</p>
             </div>
             <div className="field">
               <label htmlFor="room-capacity">Capacidade</label>
-              <input id="room-capacity" type="number" inputMode="numeric" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value)} required />
-              <p className="hint">Número de lugares, no mínimo 1.</p>
+              <input id="room-capacity" aria-describedby="room-capacity-hint" type="number" inputMode="numeric" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value)} required />
+              <p className="hint" id="room-capacity-hint">Número de lugares, no mínimo 1.</p>
             </div>
             <div className="form-actions">
-              <button type="submit">{editing ? 'Salvar' : 'Criar sala'}</button>
+              <button type="submit" disabled={saving}>{saving ? 'Salvando…' : editing ? 'Salvar' : 'Criar sala'}</button>
               {editing && (
                 <button type="button" onClick={() => { setEditing(undefined); setName(''); setCapacity('1'); }}>
                   Cancelar edição
