@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import * as api from '../api/api';
 import { useAuth } from '../auth/AuthContext';
-import ConfirmButton from '../components/ConfirmButton';
+import EmptyState from '../components/EmptyState';
 import ErrorBanner from '../components/ErrorBanner';
-import { AlertIcon } from '../components/Icons';
-import { fmtRange, parseUtc, validateRange } from '../lib';
+import { AlertIcon, PlusIcon, RoomIcon } from '../components/Icons';
+import PageHeader from '../components/PageHeader';
+import ReservationTable from '../components/ReservationTable';
+import { parseUtc, validateRange } from '../lib';
 
 export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: () => void }) {
   const [roomId, setRoomId] = useState('');
@@ -14,9 +16,15 @@ export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: 
   const [occurrences, setOccurrences] = useState('2');
   const [error, setError] = useState<unknown>(null);
   const [validation, setValidation] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // Liga a mensagem de validação aos campos que ela descreve.
+  const describe = (hint: string, invalid: boolean) => (invalid ? `${hint} res-validation` : hint);
+  const roomInvalid = validation === 'Escolha uma sala.';
+  const rangeInvalid = !!validation && !roomInvalid;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setError(null);
     const msg = !(roomId || rooms[0]) ? 'Escolha uma sala.' : validateRange(start, end);
     setValidation(msg);
@@ -26,108 +34,74 @@ export function ReservationForm({ rooms, onDone }: { rooms: api.Room[]; onDone: 
       startsAt: parseUtc(start).toISOString(),
       endsAt: parseUtc(end).toISOString(),
     };
+    setBusy(true);
     try {
       if (recurring) await api.reserveRecurring({ ...body, occurrences: Number(occurrences) });
       else await api.reserve(body);
       onDone();
     } catch (err) {
       setError(err);
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
-    <form className="card panel" onSubmit={submit} noValidate>
-      <h2>Reservar sala</h2>
+    <form id="reservar" className="card" onSubmit={submit} noValidate>
+      <div className="form-title">
+        <h2>Nova reserva</h2>
+        <p className="hint">Horários em UTC, em múltiplos de 15 minutos (:00, :15, :30, :45).</p>
+      </div>
       <ErrorBanner error={error} />
       {validation && (
-        <div className="error" role="alert">
+        <div className="error" role="alert" id="res-validation">
           <AlertIcon />
           <span>{validation}</span>
         </div>
       )}
-      <label>
-        Sala
-        <select value={roomId || rooms[0]?.id || ''} onChange={(e) => setRoomId(e.target.value)}>
-          {rooms.map((r) => (
-            <option key={r.id} value={r.id}>{r.name} ({r.capacity} lugares)</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Início (UTC)
-        <input type="datetime-local" step={900} value={start} onChange={(e) => setStart(e.target.value)} />
-      </label>
-      <label>
-        Fim (UTC)
-        <input type="datetime-local" step={900} value={end} onChange={(e) => setEnd(e.target.value)} />
-      </label>
-      <p className="hint">Horários em UTC, em múltiplos de 15 minutos (:00, :15, :30, :45).</p>
-      <label className="check">
-        <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
-        Repetir semanalmente
-      </label>
-      {recurring && (
-        <label>
-          Ocorrências
-          <select value={occurrences} onChange={(e) => setOccurrences(e.target.value)}>
-            <option value="2">2</option>
-            <option value="3">3</option>
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor="res-room">Sala</label>
+          <select id="res-room" aria-describedby={describe('res-room-hint', roomInvalid)} aria-invalid={roomInvalid || undefined} value={roomId || rooms[0]?.id || ''} onChange={(e) => setRoomId(e.target.value)}>
+            {rooms.map((r) => (
+              <option key={r.id} value={r.id}>{r.name} ({r.capacity} lugares)</option>
+            ))}
           </select>
-        </label>
-      )}
-      <button type="submit">Reservar</button>
-    </form>
-  );
-}
-
-function ReservationList({ items, rooms, onChanged, setError, empty }: {
-  items: api.Reservation[];
-  rooms: api.Room[];
-  onChanged: () => void;
-  setError: (e: unknown) => void;
-  empty: string;
-}) {
-  const roomName = (id: string) => rooms.find((r) => r.id === id)?.name ?? id;
-  async function run(fn: () => Promise<unknown>) {
-    setError(null);
-    try {
-      await fn();
-      onChanged();
-    } catch (err) {
-      setError(err);
-    }
-  }
-  if (items.length === 0) {
-    return (
-      <div className="empty">
-        <strong>Nenhuma reserva.</strong>
-        <span>{empty}</span>
+          <p className="hint" id="res-room-hint">A capacidade aparece entre parênteses.</p>
+        </div>
+        <div className="field">
+          <label htmlFor="res-start">Início (UTC)</label>
+          <input id="res-start" aria-describedby={describe('res-start-hint', rangeInvalid)} aria-invalid={rangeInvalid || undefined} type="datetime-local" step={900} value={start} onChange={(e) => setStart(e.target.value)} />
+          <p className="hint" id="res-start-hint">Ex.: 09:00 ou 09:15.</p>
+        </div>
+        <div className="field">
+          <label htmlFor="res-end">Fim (UTC)</label>
+          <input id="res-end" aria-describedby={describe('res-end-hint', rangeInvalid)} aria-invalid={rangeInvalid || undefined} type="datetime-local" step={900} value={end} onChange={(e) => setEnd(e.target.value)} />
+          <p className="hint" id="res-end-hint">Deve ser depois do início.</p>
+        </div>
       </div>
-    );
-  }
-  return (
-    <ul className="list">
-      {items.map((r) => (
-        <li key={r.id} className={r.status === 'CANCELLED' ? 'row is-cancelled' : 'row'}>
-          <span className="row-main">
-            <strong className="row-title">{roomName(r.roomId)}</strong>
-            <span className="meta">{fmtRange(r.startsAt, r.endsAt)}</span>
-            <span className="chips">
-              {r.status === 'ACTIVE' ? <span className="chip active">Ativa</span> : <span className="chip">Cancelada</span>}
-              {r.seriesId && <span className="chip series">Série semanal</span>}
-            </span>
-          </span>
-          {r.status === 'ACTIVE' && (
-            <span className="actions">
-              <ConfirmButton label="Cancelar" confirmLabel="Confirmar cancelamento" onConfirm={() => void run(() => api.cancelReservation(r.id))} />
-              {r.seriesId && (
-                <ConfirmButton label="Cancelar série" confirmLabel="Cancelar toda a série" onConfirm={() => void run(() => api.cancelSeries(r.seriesId!))} />
-              )}
-            </span>
+      <div className="form-foot">
+        <div className="options">
+          <label className="check">
+            <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
+            Repetir semanalmente
+          </label>
+          {recurring && (
+            <div className="field">
+              <label htmlFor="res-occ">Ocorrências</label>
+              <select id="res-occ" value={occurrences} onChange={(e) => setOccurrences(e.target.value)} aria-describedby="res-occ-hint">
+                <option value="2">2</option>
+                <option value="3">3</option>
+              </select>
+            </div>
           )}
-        </li>
-      ))}
-    </ul>
+        </div>
+        <button type="submit" disabled={busy}>{busy ? 'Salvando…' : 'Reservar'}</button>
+      </div>
+      {recurring && (
+        <p className="hint" id="res-occ-hint">Mesmo dia e horário nas semanas seguintes; se uma ocorrência conflitar, nenhuma é criada.</p>
+      )}
+    </form>
   );
 }
 
@@ -153,39 +127,54 @@ export default function ReservationsPage() {
   }, [role]);
   useEffect(() => void load(), [load]);
 
-  if (rooms === null || mine === null) return <p className="loading" role="status">Carregando…</p>;
+  const ready = rooms !== null && mine !== null;
+  // Vindo de "Nova reserva" na visão geral: foca o formulário quando ele existir.
+  useEffect(() => {
+    if (ready && window.location.hash === '#reservar') document.getElementById('res-start')?.focus();
+  }, [ready]);
+
+  const header = (
+    <PageHeader
+      title="Reservas"
+      subtitle="Suas reservas e, para administradores, as de todos. Horários em UTC."
+      action={
+        rooms && rooms.length > 0 ? (
+          <button type="button" className="primary" onClick={() => document.getElementById('res-start')?.focus()}>
+            <PlusIcon />
+            Nova reserva
+          </button>
+        ) : undefined
+      }
+    />
+  );
+  if (!ready) return <section>{header}<p className="loading" role="status">Carregando…</p></section>;
   return (
     <section>
-      <div className="page-head">
-        <h1>Reservas</h1>
-      </div>
+      {header}
       <ErrorBanner error={error} />
-      <div className="split">
-        {rooms.length > 0 ? (
-          <ReservationForm rooms={rooms} onDone={() => void load()} />
-        ) : (
-          <div className="empty panel">
-            <strong>Cadastre uma sala para reservar.</strong>
-            <span>Um administrador cria salas na aba Salas.</span>
-          </div>
-        )}
-        <div className="stack">
-          <div className="section-head">
-            <h2>Minhas reservas</h2>
-            <span className="count">{countLabel(mine.length)}</span>
-          </div>
-          <ReservationList items={mine} rooms={rooms} onChanged={() => void load()} setError={setError} empty="Use o formulário para reservar uma sala." />
-          {role === 'ADMIN' && all && (
-            <>
-              <div className="section-head stack-gap">
-                <h2>Todas as reservas</h2>
-                <span className="count">{countLabel(all.length)}</span>
-              </div>
-              <ReservationList items={all} rooms={rooms} onChanged={() => void load()} setError={setError} empty="Ninguém reservou salas ainda." />
-            </>
-          )}
+      {rooms.length > 0 ? (
+        <ReservationForm rooms={rooms} onDone={() => void load()} />
+      ) : (
+        <EmptyState icon={<RoomIcon />} title="Cadastre uma sala para reservar.">
+          Um administrador cria salas na aba Salas.
+        </EmptyState>
+      )}
+      <div className="card stack">
+        <div className="card-head">
+          <h2>Minhas reservas</h2>
+          <span className="count">{countLabel(mine.length)}</span>
         </div>
+        <ReservationTable items={mine} rooms={rooms} onChanged={() => void load()} setError={setError} empty="Use o formulário acima para reservar uma sala." caption="Minhas reservas" />
       </div>
+      {role === 'ADMIN' && all && (
+        <div className="card stack">
+          <div className="card-head">
+            <h2>Todas as reservas</h2>
+            <span className="count">{countLabel(all.length)}</span>
+          </div>
+          <ReservationTable items={all} rooms={rooms} onChanged={() => void load()} setError={setError} empty="Ninguém reservou salas ainda." caption="Todas as reservas" />
+        </div>
+      )}
     </section>
   );
 }

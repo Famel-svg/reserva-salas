@@ -18,6 +18,12 @@ export function validateRange(start: string, end: string): string | null {
 
 export const fmt = (iso: string) => new Date(iso).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
 
+/** "24/10 10:00 UTC": data curta para cartões. */
+export const fmtShort = (iso: string) => {
+  const s = new Date(iso).toISOString();
+  return `${s.slice(8, 10)}/${s.slice(5, 7)} ${s.slice(11, 16)} UTC`;
+};
+
 /** "2030-01-01 10:00–11:00 UTC" no mesmo dia; senão as duas datas completas. */
 export function fmtRange(startIso: string, endIso: string) {
   const s = fmt(startIso);
