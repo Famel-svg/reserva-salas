@@ -17,7 +17,9 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.RabbitMQContainer;
 
 /** Postgres real (um container por JVM) + app completa. Cada teste cria suas proprias salas e usuarios. */
 @SpringBootTest(properties = "app.jwt.secret=integration-test-secret-with-at-least-32-bytes")
@@ -27,8 +29,16 @@ abstract class AbstractPostgresIT {
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
+    @ServiceConnection(name = "redis")
+    static final GenericContainer<?> REDIS = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
+
+    @ServiceConnection
+    static final RabbitMQContainer RABBIT = new RabbitMQContainer("rabbitmq:3.13-alpine");
+
     static {
         POSTGRES.start();
+        REDIS.start();
+        RABBIT.start();
     }
 
     @Autowired protected MockMvc mvc;

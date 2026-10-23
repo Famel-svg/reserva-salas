@@ -11,6 +11,17 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cache:
+    type: redis
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASSWORD:guest}
   mvc:
     problemdetails:
       enabled: true
@@ -20,6 +31,15 @@ app:
     # Sem valor padrão: a aplicação não sobe sem JWT_SECRET.
     secret: ${JWT_SECRET}
     ttl: ${JWT_TTL:PT15M}
+  refresh:
+    ttl: ${REFRESH_TTL:P7D}
+  ratelimit:
+    login-per-minute: 10
+    write-per-minute: 60
+  notifications:
+    # log: só registra no console. smtp: envia por SMTP (spring.mail.*).
+    mode: ${NOTIFICATION_MODE:log}
+    from: ${NOTIFICATION_FROM:noreply@reserva.local}
   reservation:
     max-duration: PT4H
     cancel-deadline: PT2H

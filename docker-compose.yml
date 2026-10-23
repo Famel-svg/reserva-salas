@@ -14,10 +14,30 @@ services:
       timeout: 3s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
   app:
     build: .
     depends_on:
       db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     environment:
       # Falha no startup se JWT_SECRET não estiver definido.
@@ -25,6 +45,9 @@ services:
       DB_URL: jdbc:postgresql://db:5432/reserva_salas
       DB_USER: reserva
       DB_PASSWORD: ${DB_PASSWORD:-reserva}
+      REDIS_HOST: redis
+      RABBIT_HOST: rabbitmq
+      NOTIFICATION_MODE: ${NOTIFICATION_MODE:-log}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
