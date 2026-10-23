@@ -28,14 +28,14 @@ class RoomServiceTest {
     void listsAll() {
         Room r = new Room("A", 4);
         when(rooms.findAll()).thenReturn(List.of(r));
-        assertThat(service.list()).containsExactly(r);
+        assertThat(service.list()).containsExactly(RoomResponse.from(r));
     }
 
     @Test
     void getsExisting() {
         Room r = new Room("A", 4);
         when(rooms.findById(r.getId())).thenReturn(Optional.of(r));
-        assertThat(service.get(r.getId())).isSameAs(r);
+        assertThat(service.get(r.getId())).isEqualTo(RoomResponse.from(r));
     }
 
     @Test
@@ -48,10 +48,10 @@ class RoomServiceTest {
     @Test
     void createsRoom() {
         when(rooms.save(any(Room.class))).thenAnswer(i -> i.getArgument(0));
-        Room r = service.create("Sala", 8);
-        assertThat(r.getName()).isEqualTo("Sala");
-        assertThat(r.getCapacity()).isEqualTo(8);
-        assertThat(r.getId()).isNotNull();
+        RoomResponse r = service.create("Sala", 8);
+        assertThat(r.name()).isEqualTo("Sala");
+        assertThat(r.capacity()).isEqualTo(8);
+        assertThat(r.id()).isNotNull();
     }
 
     @Test
@@ -64,9 +64,9 @@ class RoomServiceTest {
     void updatesRoom() {
         Room r = new Room("A", 4);
         when(rooms.findById(r.getId())).thenReturn(Optional.of(r));
-        Room updated = service.update(r.getId(), "B", 6);
-        assertThat(updated.getName()).isEqualTo("B");
-        assertThat(updated.getCapacity()).isEqualTo(6);
+        RoomResponse updated = service.update(r.getId(), "B", 6);
+        assertThat(updated.name()).isEqualTo("B");
+        assertThat(updated.capacity()).isEqualTo(6);
     }
 
     @Test
